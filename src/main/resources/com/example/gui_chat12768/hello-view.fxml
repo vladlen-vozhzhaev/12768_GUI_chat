@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.gui_chat12768.HelloController">
+   <TextArea prefHeight="350" prefWidth="300" fx:id="textArea"/>
+   <HBox prefHeight="50" prefWidth="300">
+      <children>
+         <TextField prefWidth="200" fx:id="textField"/>
+         <Button onAction="#onSendMessage" prefWidth="100" mnemonicParsing="false" text="Отправить" />
+      </children>
+   </HBox>
+</VBox>
