@@ -11,11 +11,12 @@
 <HBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.example.gui_chat12768.HelloController">
    <VBox prefWidth="200" prefHeight="400" fx:id="usersBox"/>
    <VBox prefWidth="300" prefHeight="400" alignment="CENTER">
+      <Label fx:id="chatName" prefWidth="300" text="Общий чат" prefHeight="25"/>
       <TextArea editable="false" fx:id="textArea" prefHeight="350" prefWidth="300"/>
       <HBox>
          <TextField onAction="#onSend" fx:id="textField" prefHeight="25" prefWidth="225"/>
          <Button onAction="#onSend" text="Отправить" prefHeight="25" prefWidth="75"/>
       </HBox>
-      <Button onAction="#onConnect" text="Подключиться" prefWidth="300" prefHeight="25"/>
+      <!--<Button onAction="#onConnect" text="Подключиться" prefWidth="300" prefHeight="25"/>-->
    </VBox>
 </HBox>

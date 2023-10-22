@@ -25,6 +25,8 @@ public class HelloController {
     private TextArea textArea;
     @FXML
     private TextField textField;
+    @FXML
+    private Label chatName;
     private DataOutputStream out;
     // private int formId;
     private int toId = 0;
@@ -42,40 +44,61 @@ public class HelloController {
             throw new RuntimeException(e);
         }
     }
-    @FXML
-    private void onConnect(){
+    public void sendRequest(){
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("getPrivateMessageWith", toId);
         try {
-            Socket socket = new Socket("127.0.0.1", 9123);
-            out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream is = new DataInputStream(socket.getInputStream());
+            out.writeUTF(jsonObject.toJSONString());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @FXML
+    public void onConnect(){
+        try {
+            Socket socket = new Socket("127.0.0.1", 9123); // Подключаемся к серверу
+            out = new DataOutputStream(socket.getOutputStream()); // Создаём поток вывода
+            DataInputStream is = new DataInputStream(socket.getInputStream()); // Создаём поток ввода
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    while (true){
+                    while (true){ // Постоянно ждём информации от сервера
                         try {
                             String response = is.readUTF();// Ожидаем сообщение от сервера
-                            JSONParser jsonParser = new JSONParser();
-                            JSONObject jsonObject = (JSONObject) jsonParser.parse(response);
-                            if(jsonObject.containsKey("message")){
-                                String msg = jsonObject.get("message").toString();
-                                textArea.appendText(msg+"\n");
-                            } else if (jsonObject.containsKey("users")) {
+                            JSONParser jsonParser = new JSONParser(); // т.к. сервер присылает сообщения в формате JSON, то для разбора нам необходим JSONParser
+                            JSONObject jsonObject = (JSONObject) jsonParser.parse(response); // Превращаем сообщение от сервера в объект JSON
+                            if(jsonObject.containsKey("message")){ // Если есть ключ "message", значит нам пришло сообщение
+                                String msg = jsonObject.get("message").toString(); // Получаем текст сообщения
+                                boolean privateMessage = Boolean.parseBoolean(jsonObject.get("private").toString());
+                                int from = Integer.parseInt(jsonObject.get("from").toString());
+                                if(from == toId){ // from - кто отправил сообщение, toId - тот с кем мы сейчас в диалоговом окне
+                                    textArea.appendText(msg+"\n"); // Печатаем сообщение на экран диалога ЛС
+                                }else if (!privateMessage){
+                                    textArea.appendText(msg+"\n"); // Общий чат
+                                }
+
+                            } else if (jsonObject.containsKey("users")) { // Если ключ "users", значит нам пришёл список пользователей
+                                // в jsonObject = {"users": [{"id":1,  "name": "Ivan"},{"id":2, "name":"Igor"},{id:3, "name": "Oleg"}]}
                                 JSONArray jsonArray = (JSONArray) jsonObject.get("users");
+                                // jsonArray = [{"id":1,  "name": "Ivan"},{"id":2, "name":"Igor"},{id:3, "name": "Oleg"}]
                                 Platform.runLater(new Runnable() {
                                     @Override
                                     public void run() {
                                         usersBox.getChildren().clear();
                                         for (int i = 0; i < jsonArray.size(); i++) {
-                                            JSONObject jsonUser = (JSONObject) jsonArray.get(i);
-                                            String userName = jsonUser.get("name").toString();
-                                            int id = Integer.parseInt(jsonUser.get("id").toString());
-                                            Button userBtn = new Button();
-                                            userBtn.setText(userName);
-                                            userBtn.setPrefWidth(200);
-                                            userBtn.setOnAction((event)->{
-                                                toId = id;
+                                            JSONObject jsonUser = (JSONObject) jsonArray.get(i); // jsonUser = {"id":1,  "name": "Ivan"}
+                                            String userName = jsonUser.get("name").toString(); // "Ivan"
+                                            int id = Integer.parseInt(jsonUser.get("id").toString()); // 1
+                                            Button userBtn = new Button(); // Создаём кнопку
+                                            userBtn.setText(userName); // Записываем имя пользователя
+                                            userBtn.setPrefWidth(200); // Установим ширину кнопки
+                                            userBtn.setOnAction((event)->{ // Что делать если пользователь нажал на кнопку
+                                                toId = id; // Меняем ID получателя
+                                                chatName.setText("Чат с "+userName);
+                                                textArea.clear();
+                                                sendRequest();
                                             });
-                                            usersBox.getChildren().add(userBtn);
+                                            usersBox.getChildren().add(userBtn); // Добавляем кнопку на экран в блок VBox
                                         }
                                     }
                                 });
