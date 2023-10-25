@@ -14,7 +14,8 @@
       <Label fx:id="chatName" prefWidth="300" text="Общий чат" prefHeight="25"/>
       <TextArea editable="false" fx:id="textArea" prefHeight="350" prefWidth="300"/>
       <HBox>
-         <TextField onAction="#onSend" fx:id="textField" prefHeight="25" prefWidth="225"/>
+         <TextField onAction="#onSend" fx:id="textField" prefHeight="25" prefWidth="175"/>
+         <Button onAction="#fileReceiver" text="file" prefWidth="50" fx:id="inputBtn"/>
          <Button onAction="#onSend" text="Отправить" prefHeight="25" prefWidth="75"/>
       </HBox>
       <!--<Button onAction="#onConnect" text="Подключиться" prefWidth="300" prefHeight="25"/>-->
