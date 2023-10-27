@@ -8,11 +8,15 @@
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ScrollPane?>
 <HBox xmlns:fx="http://javafx.com/fxml" fx:controller="com.example.gui_chat12768.HelloController">
    <VBox prefWidth="200" prefHeight="400" fx:id="usersBox"/>
    <VBox prefWidth="300" prefHeight="400" alignment="CENTER">
       <Label fx:id="chatName" prefWidth="300" text="Общий чат" prefHeight="25"/>
-      <TextArea editable="false" fx:id="textArea" prefHeight="350" prefWidth="300"/>
+      <!--<TextArea editable="false" fx:id="textArea" prefHeight="350" prefWidth="300"/>-->
+      <ScrollPane prefHeight="350" prefWidth="Infinity">
+         <VBox fx:id="messageBox" prefWidth="Infinity"></VBox>
+      </ScrollPane>
       <HBox>
          <TextField onAction="#onSend" fx:id="textField" prefHeight="25" prefWidth="175"/>
          <Button onAction="#fileReceiver" text="file" prefWidth="50" fx:id="inputBtn"/>

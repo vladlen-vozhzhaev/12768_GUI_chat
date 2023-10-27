@@ -7,7 +7,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.json.simple.JSONArray;
@@ -22,7 +25,8 @@ public class HelloController {
     @FXML
     private VBox usersBox;
     @FXML
-    private TextArea textArea;
+    private VBox messageBox;
+    //private TextArea textArea;
     @FXML
     private TextField textField;
     @FXML
@@ -30,27 +34,42 @@ public class HelloController {
     @FXML
     private Button inputBtn;
     private DataOutputStream out;
+    private DataInputStream is;
     // private int formId;
     private int toId = 0;
     private boolean connected = false;
     private int clientId = 0;
     private File file = null;
+    private Text text;
+    private ImageView imageView;
     @FXML
     private void onSend(){
         JSONObject jsonObject = new JSONObject();
         if(file != null){
-            jsonObject.put("fileName", file.getName());
-            /*out.writeUTF(jsonObject.toJSONString());
-            FileInputStream fis = new FileInputStream(file);
-            BufferedInputStream bis = new BufferedInputStream(fis);
-            byte[] buffer = new byte[1024];
-            int i;
-            while ((i = bis.read(buffer)) != -1){
-                out.write(buffer);
-            }*/
+            try {
+                FileInputStream fis = new FileInputStream(file);
+                jsonObject.put("fileName", file.getName());
+                jsonObject.put("fileSize", file.length());
+                jsonObject.put("to_id", toId);
+                out.writeUTF(jsonObject.toJSONString());
+                BufferedInputStream bis = new BufferedInputStream(fis);
+                byte[] buffer = new byte[1024];
+                int i;
+                while ((i = bis.read(buffer)) != -1){
+                    out.write(buffer);
+                }
+                out.flush();
+                file = null;
+                textField.clear();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }else{
             String msg = textField.getText(); // Считываем сообщение пользователя из поля ввода
-            textArea.appendText(msg+"\n"); // Выводим на экран сообщение
+            text = new Text();
+            text.setText(msg);
+            messageBox.getChildren().add(text);
+            //textArea.appendText(msg+"\n"); // Выводим на экран сообщение
             textField.clear(); // Очищаем поле ввода сообщения
             jsonObject.put("message", msg); // Передаваемое сообщение
             jsonObject.put("to_id", toId); // ID получателя сообщения
@@ -76,7 +95,7 @@ public class HelloController {
         try {
             Socket socket = new Socket("127.0.0.1", 9123); // Подключаемся к серверу
             out = new DataOutputStream(socket.getOutputStream()); // Создаём поток вывода
-            DataInputStream is = new DataInputStream(socket.getInputStream()); // Создаём поток ввода
+            is = new DataInputStream(socket.getInputStream()); // Создаём поток ввода
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -87,12 +106,29 @@ public class HelloController {
                             JSONObject jsonObject = (JSONObject) jsonParser.parse(response); // Превращаем сообщение от сервера в объект JSON
                             if(jsonObject.containsKey("message")){ // Если есть ключ "message", значит нам пришло сообщение
                                 String msg = jsonObject.get("message").toString(); // Получаем текст сообщения
+                                int type = Integer.parseInt(jsonObject.get("type").toString());
                                 boolean privateMessage = Boolean.parseBoolean(jsonObject.get("private").toString());
                                 int from = Integer.parseInt(jsonObject.get("from").toString());
                                 if((from == toId || from == clientId) && privateMessage){ // from - кто отправил сообщение, toId - тот с кем мы сейчас в диалоговом окне
-                                    textArea.appendText(msg+"\n"); // Печатаем сообщение на экран диалога ЛС
+                                    if(type == 1){
+                                        renderTextMessage(msg);
+                                    } else if (type == 2) {
+                                        String fileName = msg.split(": ")[1];
+                                        downloadFile(fileName);
+                                        FileInputStream fis = new FileInputStream("files/"+fileName);
+                                        renderImageMessage(fis);
+                                    }
+                                    //textArea.appendText(msg+"\n"); // Печатаем сообщение на экран диалога ЛС
                                 }else if (!privateMessage && toId == 0){
-                                    textArea.appendText(msg+"\n"); // Общий чат
+                                    if(type == 1){
+                                        renderTextMessage(msg);
+                                    } else if (type == 2) {
+                                        String fileName = msg.split(": ")[1];
+                                        downloadFile(fileName);
+                                        FileInputStream fis = new FileInputStream("files/"+fileName);
+                                        renderImageMessage(fis);
+                                    }
+                                    //textArea.appendText(msg+"\n"); // Общий чат
                                 }
 
                             } else if (jsonObject.containsKey("users")) { // Если ключ "users", значит нам пришёл список пользователей
@@ -138,6 +174,7 @@ public class HelloController {
         Stage stage = (Stage) inputBtn.getScene().getWindow();
         FileChooser fileChooser = new FileChooser();
         file = fileChooser.showOpenDialog(stage);
+        textField.setText("Файл: "+file.getName());
     }
 
     public void renderUserBtn(String userName, int userId){
@@ -152,9 +189,51 @@ public class HelloController {
             userBtn.setStyle("-fx-background-color: #7FFFD4");
             toId = userId; // Меняем ID получателя
             chatName.setText("Чат с "+userName);
-            textArea.clear();
+            messageBox.getChildren().clear();
+            //textArea.clear();
             sendRequest();
         });
         usersBox.getChildren().add(userBtn); // Добавляем кнопку на экран в блок VBox
+    }
+    public void renderTextMessage(String msg){
+        Platform.runLater(()->{
+            text = new Text();
+            text.setText(msg);
+            messageBox.getChildren().add(text);
+        });
+    }
+    public void renderImageMessage(FileInputStream fis){
+        Platform.runLater(()->{
+            imageView = new ImageView();
+            Image image = new Image(fis);
+            imageView.setImage(image);
+            messageBox.getChildren().add(imageView);
+        });
+    }
+
+    // Принимаем файл с сервера и сохраняем его на жесткий диск
+    public void downloadFile(String fileName) throws IOException {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("getFile", fileName);
+        out.writeUTF(jsonObject.toJSONString());
+        while (true){
+            try {
+                long fileSize = Long.parseLong(is.readUTF());
+                FileOutputStream fos = new FileOutputStream("files/"+fileName, true);
+                byte[] buffer = new byte[1024];
+                while (true){
+                    is.read(buffer);
+                    for(byte b : buffer){
+                        fos.write(b);
+                    }
+                    fileSize -= 1024;
+                    if(fileSize <= 0) break;
+                }
+                break;
+            }catch (NumberFormatException e){
+                System.out.println("Неверный размер");
+            }
+        }
+
     }
 }
